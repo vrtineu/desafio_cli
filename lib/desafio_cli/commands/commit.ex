@@ -1,5 +1,4 @@
 defmodule DesafioCli.Commands.Commit do
-
   alias DesafioCli.Db
 
   def execute() do
