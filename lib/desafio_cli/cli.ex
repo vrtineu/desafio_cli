@@ -1,15 +1,25 @@
 defmodule DesafioCli.Cli do
   alias DesafioCli.Commands
 
-  def loop() do
-    "> "
-    |> IO.gets()
-    |> String.trim()
-    |> parse_command()
-    |> Commands.handle()
-    |> response()
+  def loop(input_device \\ :stdio, output_device \\ :stdio) do
+    receive do
+      :eof -> :ok
+    after
+      0 ->
+        case IO.gets(input_device, "> ") do
+          :eof ->
+            :ok
 
-    loop()
+          input ->
+            input
+            |> String.trim()
+            |> parse_command()
+            |> Commands.handle()
+            |> response(output_device)
+
+            loop(input_device, output_device)
+        end
+    end
   end
 
   def parse_command(input) do
@@ -21,6 +31,8 @@ defmodule DesafioCli.Cli do
     {key, value} = split_key_value(rest)
     {String.upcase(cmd), format_key(key), format_value(value)}
   end
+
+  defp parse_command_words([]), do: {[], [], []}
 
   defp split_key_value(words) do
     case words do
@@ -46,7 +58,7 @@ defmodule DesafioCli.Cli do
         end
 
       [] ->
-        {Enum.reverse(acc) |> Enum.join(" "), []}
+        raise "Invalid quoted string"
     end
   end
 
@@ -72,6 +84,6 @@ defmodule DesafioCli.Cli do
     end
   end
 
-  defp response({:ok, result}), do: IO.puts(result)
-  defp response({:error, reason}), do: IO.puts(reason)
+  defp response({:ok, result}, output_device), do: IO.puts(output_device, result)
+  defp response({:error, reason}, output_device), do: IO.puts(output_device, reason)
 end
