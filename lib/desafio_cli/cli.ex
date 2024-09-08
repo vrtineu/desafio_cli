@@ -4,6 +4,7 @@ defmodule DesafioCli.Cli do
   def loop() do
     "> "
     |> IO.gets()
+    |> String.trim()
     |> parse_command()
     |> Commands.handle()
     |> response()
@@ -18,8 +19,7 @@ defmodule DesafioCli.Cli do
 
   defp parse_command_words([cmd | rest]) do
     {key, value} = split_key_value(rest)
-
-    {String.upcase(cmd), format_key(key), value}
+    {String.upcase(cmd), format_key(key), format_value(value)}
   end
 
   defp split_key_value(words) do
@@ -27,9 +27,6 @@ defmodule DesafioCli.Cli do
       [<<"\"", _::binary>> = quoted_start | rest] ->
         {quoted_key, remaining} = extract_quoted_string([quoted_start | rest])
         {quoted_key, remaining}
-
-      [single_word] ->
-        {single_word, []}
 
       [key | value] ->
         {key, value}
@@ -53,14 +50,28 @@ defmodule DesafioCli.Cli do
     end
   end
 
-  defp format_key([]), do: []
-
-  defp format_key(key) do
+  defp format_key(key) when is_bitstring(key) do
     key
     |> String.trim("\"")
     |> List.wrap()
   end
 
-  defp response({:ok, result}), do: IO.write("#{result}\n")
-  defp response({:error, reason}), do: IO.write("#{reason}\n")
+  defp format_key(key) when is_list(key) do
+    key
+    |> Enum.map(&format_key/1)
+  end
+
+  defp format_value(value) when is_list(value) do
+    case value do
+      [<<"\"", _::binary>> = quoted_start | rest] ->
+        {quoted_value, remaining} = extract_quoted_string([quoted_start | rest])
+        [String.trim(quoted_value, "\"")] ++ remaining
+
+      _ ->
+        value
+    end
+  end
+
+  defp response({:ok, result}), do: IO.puts(result)
+  defp response({:error, reason}), do: IO.puts(reason)
 end
